@@ -2,6 +2,8 @@
 
 namespace EyeTrackVR
 {
+    // Credit to yewnyx on the VRC OSC Discord for this
+    
     public class OSCClient
     {
         public static float LeftEyeX {get; set;}

@@ -1,24 +1,43 @@
-﻿using System;
-using System.Threading;
+﻿using BaseX;
 using Rug.Osc;
+using System;
+using System.Threading;
 
 namespace EyeTrackVR
 {
-    public class OSCClient
+    public class ETVR_OSC
     {
-        private static OscReceiver _receiver = null;
-        private static Thread _thread = null;
+        public static float LeftEyeX { get; set; }
+        public static float RightEyeX { get; set; }
+        public static float EyesY { get; set; }
+        public static float LeftEyeLid { get; set; }
+        public static float RightEyeLid { get; set; }
+        public static float EyeDilation { get; set; }
 
-        public OSCClient()
+        private static OscReceiver _receiver;
+        private static Thread _thread;
+        private const int DEFAULT_PORT = 9000;
+
+        public ETVR_OSC()
         {
-            _receiver = new OscReceiver(9001);
+            if (_receiver != null)
+            {
+                return;
+            }
+
+            _receiver = new OscReceiver(DEFAULT_PORT);
             _thread = new Thread(new ThreadStart(ListenLoop));
             _receiver.Connect();
             _thread.Start();
         }
 
-        public OSCClient(int port)
+        public ETVR_OSC(int port)
         {
+            if (_receiver != null)
+            {
+                return;
+            }
+
             _receiver = new OscReceiver(port);
             _thread = new Thread(new ThreadStart(ListenLoop));
             _receiver.Connect();
@@ -27,24 +46,50 @@ namespace EyeTrackVR
 
         private static void ListenLoop()
         {
-            try
+            OscPacket packet;
+            OscMessage message;
+
+            while (_receiver.State != OscSocketState.Closed)
             {
-                while (_receiver.State != OscSocketState.Closed)
+                try
                 {
                     if (_receiver.State == OscSocketState.Connected)
                     {
-                        var packet = _receiver.Receive();
-                        if (OscMessage.TryParse(packet.ToString(), out var message) && message.Address == "/1/push12")
+                        packet = _receiver.Receive();
+                        if (OscMessage.TryParse(packet.ToString(), out message))
                         {
-                            var x = (float)message[0];
-                            Console.WriteLine($"push: {x}");
+                            switch (message.Address)
+                            {
+                                case "/avatar/parameters/LeftEye":
+                                    LeftEyeX = (float)message[0];
+                                    break;
+                                case "/avatar/parameters/RightEye":
+                                    RightEyeX = (float)message[0];
+                                    break;
+                                case "/avatar/parameters/EyesY":
+                                    EyesY = (float)message[0];
+                                    break;
+                                case "/avatar/parameters/LeftEyeLid":
+                                    LeftEyeLid = (float)message[0];
+                                    break;
+                                case "/avatar/parameters/RightEyeLid":
+                                    RightEyeLid = (float)message[0];
+                                    break;
+                                case "/avatar/parameters/EyesDilation":
+                                    EyeDilation = (float)message[0];
+                                    break;
+                                default:
+                                    break;
+                            }
                         }
                     }
+                    Thread.Sleep(10);
                 }
-            }
-            catch (Exception e)
-            {
-                if (_receiver.State == OscSocketState.Connected) { Console.Error.WriteLine(e.Message); }
+                catch (Exception e)
+                {
+                    if (_receiver.State == OscSocketState.Connected)
+                        UniLog.Error(e.Message);
+                }
             }
         }
 

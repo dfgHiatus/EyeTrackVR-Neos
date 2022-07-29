@@ -14,8 +14,18 @@ namespace EyeTrackVR
 		public override string Link => "https://github.com/dfgHiatus/EyeTrackVR-Neos";
 		public override void OnEngineInit()
 		{
+			config = GetConfiguration();
 			new Harmony("net.dfgHiatus.EyeTrackVR-Neos").PatchAll();
+			Engine.Current.OnShutdown += () => ETVR.Teardown();
 		}
+		private static ETVR_OSC ETVR;
+		private static ModConfiguration config;
+
+		[AutoRegisterConfigKey]
+		public static ModConfigurationKey<float> Alpha = new ModConfigurationKey<float>("alpha", "Eye Swing Multiplier X", () => 1.0f);
+
+		[AutoRegisterConfigKey]
+		public static ModConfigurationKey<float> Beta = new ModConfigurationKey<float>("beta", "Eye Swing Multiplier Y", () => 1.0f);
 
 		[HarmonyPatch(typeof(InputInterface), MethodType.Constructor)]
 		[HarmonyPatch(new[] { typeof(Engine) })]
@@ -25,6 +35,7 @@ namespace EyeTrackVR
 			{
 				try
 				{
+					ETVR = new ETVR_OSC();
 					EyeTrackVRInterface gen = new EyeTrackVRInterface();
 					__instance.RegisterInputDriver(gen);
 				}
@@ -35,74 +46,77 @@ namespace EyeTrackVR
 				}
 			}
 		}
-	}
 
-
-	[HarmonyPatch(typeof(Engine), "Shutdown")]
-	public class ShutdownPatch
-	{
-		public static bool Prefix()
+		public class EyeTrackVRInterface : IInputDriver
 		{
-			// Hardware shutdown code goes here
-			// ...
-			// ...
-			return true;
-		}
-	}
+			private Eyes _eyes;
+			private const float _defaultPupilSize = 0.0035f;
+			public int UpdateOrder => 100;
 
-	public class EyeTrackVRInterface : IInputDriver
-	{
-		private Eyes _eyes;
-		public int UpdateOrder => 100;
-
-		public void CollectDeviceInfos(DataTreeList list)
-		{
-			DataTreeDictionary eyeDataTreeDictionary = new DataTreeDictionary();
-			eyeDataTreeDictionary.Add("Name", "EyeTrackVR Eye Tracking");
-			eyeDataTreeDictionary.Add("Type", "Eye Tracking");
-			eyeDataTreeDictionary.Add("Model", "Single/Dual Cam Model"); // TODO Discern?
-			list.Add(eyeDataTreeDictionary);
-		}
-
-		public void RegisterInputs(InputInterface inputInterface)
-		{
-			_eyes = new Eyes(inputInterface, "EyeTrackVR Eye Tracking");
-		}
-
-		public void UpdateInputs(float deltaTime)
-		{
-			_eyes.IsEyeTrackingActive = _eyes.IsEyeTrackingActive;
-
-			UpdateEye(float3.Zero, float3.Zero, true, 0.003f,
-				1f, 0f, 0f, 0f, deltaTime, _eyes.LeftEye);
-			UpdateEye(float3.Zero, float3.Zero, true, 0.003f,
-				1f, 0f, 0f, 0f, deltaTime, _eyes.RightEye);
-
-			UpdateEye(float3.Zero, float3.Zero, true, 0.003f,
-				1f, 0f, 0f, 0f, deltaTime, _eyes.CombinedEye);
-			_eyes.ComputeCombinedEyeParameters();
-
-			_eyes.ConvergenceDistance = 0f;
-			_eyes.Timestamp += deltaTime;
-			_eyes.FinishUpdate();
-		}
-		private void UpdateEye(float3 gazeDirection, float3 gazeOrigin, bool status, float pupilSize, float openness,
-			float widen, float squeeze, float frown, float deltaTime, Eye eye)
-		{
-			eye.IsDeviceActive = Engine.Current.InputInterface.VR_Active;
-			eye.IsTracking = status;
-
-			if (eye.IsTracking)
+			public void CollectDeviceInfos(DataTreeList list)
 			{
-				eye.UpdateWithDirection(gazeDirection);
-				eye.RawPosition = gazeOrigin;
-				eye.PupilDiameter = pupilSize;
+				DataTreeDictionary eyeDataTreeDictionary = new DataTreeDictionary();
+				eyeDataTreeDictionary.Add("Name", "EyeTrackVR Eye Tracking");
+				eyeDataTreeDictionary.Add("Type", "Eye Tracking");
+				eyeDataTreeDictionary.Add("Model", "Single/Dual Cam Model"); // TODO Discern?
+				list.Add(eyeDataTreeDictionary);
 			}
 
-			eye.Openness = openness;
-			eye.Widen = widen;
-			eye.Squeeze = squeeze;
-			eye.Frown = frown;
+			public void RegisterInputs(InputInterface inputInterface)
+			{
+				_eyes = new Eyes(inputInterface, "EyeTrackVR Eye Tracking");
+			}
+
+			public void UpdateInputs(float deltaTime)
+			{
+				_eyes.IsEyeTrackingActive = Engine.Current.InputInterface.VR_Active;
+
+				var fakeWiden = MathX.Remap(ETVR_OSC.EyesY, 0f, 1f, 0f, 0.33f);
+
+				var leftEyeDirection = Project2DTo3D(ETVR_OSC.LeftEyeX, ETVR_OSC.EyesY);
+				UpdateEye(leftEyeDirection, float3.Zero, true, ETVR_OSC.EyeDilation, ETVR_OSC.LeftEyeLid, 
+					fakeWiden, 0f, 0f, deltaTime, _eyes.LeftEye);
+
+				var rightEyeDirection = Project2DTo3D(ETVR_OSC.LeftEyeX, ETVR_OSC.EyesY);
+				UpdateEye(rightEyeDirection, float3.Zero, true, ETVR_OSC.EyeDilation, ETVR_OSC.RightEyeLid, 
+					fakeWiden, 0f, 0f, deltaTime, _eyes.RightEye);
+
+				var combinedDirection = MathX.Average(leftEyeDirection, rightEyeDirection);
+				var combinedOpeness = MathX.Average(ETVR_OSC.LeftEyeLid, ETVR_OSC.RightEyeLid);
+				UpdateEye(combinedDirection, float3.Zero, true, ETVR_OSC.EyeDilation, combinedOpeness, 
+					fakeWiden, 0f, 0f, deltaTime, _eyes.CombinedEye);
+				_eyes.ComputeCombinedEyeParameters();
+
+				_eyes.ConvergenceDistance = 0f;
+				_eyes.Timestamp += deltaTime;
+				_eyes.FinishUpdate();
+			}
+			private void UpdateEye(float3 gazeDirection, float3 gazeOrigin, bool status, float pupilSize, float openness,
+				float widen, float squeeze, float frown, float deltaTime, Eye eye)
+			{
+				eye.IsDeviceActive = Engine.Current.InputInterface.VR_Active;
+				eye.IsTracking = status;
+
+				if (eye.IsTracking)
+				{
+					eye.UpdateWithDirection(gazeDirection);
+					eye.RawPosition = gazeOrigin;
+					eye.PupilDiameter = pupilSize != 0f ? pupilSize : _defaultPupilSize;
+				}
+
+				eye.Openness = 1f; // Debugging
+				eye.Widen = 0f; // Debugging
+				eye.Squeeze = squeeze;
+				eye.Frown = frown;
+			}
+
+			// Need to remap 0..1 to -1..1. All we need is y = 2x-1
+			private static float3 Project2DTo3D(float x, float y)
+			{
+				return new float3(MathX.Tan(config.GetValue(Alpha) * ((2 * x) - 1)),
+								  MathX.Tan(config.GetValue(Beta) * ((2 * y) - 1)),
+								  1f).Normalized;
+			}
 		}
 	}
 }

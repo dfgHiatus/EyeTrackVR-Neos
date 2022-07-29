@@ -1,10 +1,8 @@
-﻿using System;
-
-namespace EyeTrackVR.Tests
+﻿namespace EyeTrackVR.Tests
 {
     public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             OSCClient client = new OSCClient();
             Console.WriteLine("Press any key to exit");

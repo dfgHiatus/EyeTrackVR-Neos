@@ -5,6 +5,8 @@ using System.Threading;
 
 namespace EyeTrackVR
 {
+    // Credit to yewnyx on the VRC OSC Discord for this
+    
     public class ETVR_OSC
     {
         public static float LeftEyeX { get; set; }

@@ -58,7 +58,7 @@ namespace EyeTrackVR
 				DataTreeDictionary eyeDataTreeDictionary = new DataTreeDictionary();
 				eyeDataTreeDictionary.Add("Name", "EyeTrackVR Eye Tracking");
 				eyeDataTreeDictionary.Add("Type", "Eye Tracking");
-				eyeDataTreeDictionary.Add("Model", "Single/Dual Cam Model"); // TODO Discern?
+				eyeDataTreeDictionary.Add("Model", "ETVR Module");
 				list.Add(eyeDataTreeDictionary);
 			}
 
@@ -71,7 +71,7 @@ namespace EyeTrackVR
 			{
 				_eyes.IsEyeTrackingActive = Engine.Current.InputInterface.VR_Active;
 
-				var fakeWiden = MathX.Remap(ETVR_OSC.EyesY, 0f, 1f, 0f, 0.33f);
+				var fakeWiden = MathX.Remap(MathX.Clamp01(ETVR_OSC.EyesY), 0f, 1f, 0f, 0.33f);
 
 				var leftEyeDirection = Project2DTo3D(ETVR_OSC.LeftEyeX, ETVR_OSC.EyesY);
 				UpdateEye(leftEyeDirection, float3.Zero, true, ETVR_OSC.EyeDilation, ETVR_OSC.LeftEyeLid, 
@@ -104,17 +104,16 @@ namespace EyeTrackVR
 					eye.PupilDiameter = pupilSize != 0f ? pupilSize : _defaultPupilSize;
 				}
 
-				eye.Openness = 1f; // Debugging
-				eye.Widen = 0f; // Debugging
+				eye.Openness = openness;
+				eye.Widen = widen;
 				eye.Squeeze = squeeze;
 				eye.Frown = frown;
 			}
 
-			// Need to remap 0..1 to -1..1. All we need is y = 2x-1
 			private static float3 Project2DTo3D(float x, float y)
 			{
-				return new float3(MathX.Tan(config.GetValue(Alpha) * ((2 * x) - 1)),
-								  MathX.Tan(config.GetValue(Beta) * ((2 * y) - 1)),
+				return new float3(MathX.Tan(config.GetValue(Alpha) * x),
+								  MathX.Tan(config.GetValue(Beta) * y),
 								  1f).Normalized;
 			}
 		}

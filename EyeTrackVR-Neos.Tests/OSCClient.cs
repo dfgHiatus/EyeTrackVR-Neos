@@ -45,6 +45,7 @@ namespace EyeTrackVR
         {
             OscPacket packet;
             OscMessage message;
+            float canidate = 0;
 
             while (_receiver.State != OscSocketState.Closed) {
                 try {
@@ -53,22 +54,28 @@ namespace EyeTrackVR
                         if (OscMessage.TryParse(packet.ToString(), out message)) {
                             switch (message.Address) {
                                 case "/avatar/parameters/LeftEye":
-                                    LeftEyeX = (float)message[0];
+                                    float.TryParse(message[0].ToString(), out canidate);
+                                    LeftEyeX = canidate;
                                     break;
                                 case "/avatar/parameters/RightEye":
-                                    RightEyeX = (float)message[0];
+                                    float.TryParse(message[0].ToString(), out canidate);
+                                    RightEyeX = canidate;
                                     break;
                                 case "/avatar/parameters/EyesY":
-                                    EyesY = (float)message[0];
+                                    float.TryParse(message[0].ToString(), out canidate);
+                                    EyesY = canidate;
                                     break;
                                 case "/avatar/parameters/LeftEyeLid":
-                                    LeftEyeLid = (float)message[0];
+                                    float.TryParse(message[0].ToString(), out canidate);
+                                    LeftEyeLid = canidate;
                                     break;
                                 case "/avatar/parameters/RightEyeLid":
-                                    RightEyeLid = (float)message[0];
+                                    float.TryParse(message[0].ToString(), out canidate);
+                                    RightEyeLid = canidate;
                                     break;
                                 case "/avatar/parameters/EyesDilation":
-                                    EyeDilation = (float)message[0];
+                                    float.TryParse(message[0].ToString(), out canidate);
+                                    EyeDilation = canidate;
                                     break;
                                 default:
                                     break;

@@ -1,5 +1,4 @@
-﻿using BaseX;
-using Rug.Osc;
+﻿using Rug.Osc;
 using System;
 using System.Net;
 using System.Threading;
@@ -8,9 +7,9 @@ namespace EyeTrackVR
 {
     // Credit to yewnyx on the VRC OSC Discord for this
     
-    public class ETVR_OSC
+    public class OSCClient
     {
-        public static float LeftEyeX { get; set; }
+        public static float LeftEyeX {get; set;}
         public static float RightEyeX { get; set; }
         public static float EyesY { get; set; }
         public static float LeftEyeLidExpandedSqueeze { get; set; }
@@ -21,22 +20,23 @@ namespace EyeTrackVR
         private static Thread _thread;
         private const int DEFAULT_PORT = 9000;
 
-        public ETVR_OSC()
+        public OSCClient()
         {
             if (_receiver != null)
             {
                 return;
             }
+
+            _receiver = new OscReceiver(DEFAULT_PORT);
             IPAddress candidate;
             IPAddress.TryParse("127.0.0.1", out candidate);
 
             _receiver = new OscReceiver(candidate, DEFAULT_PORT);
-            _thread = new Thread(new ThreadStart(ListenLoop));
             _receiver.Connect();
             _thread.Start();
         }
 
-        public ETVR_OSC(int port)
+        public OSCClient(int port)
         {
             if (_receiver != null)
             {
@@ -61,11 +61,11 @@ namespace EyeTrackVR
                         packet = _receiver.Receive();
                         if (OscMessage.TryParse(packet.ToString(), out message)) {
                             switch (message.Address) {
-                                case "/avatar/parameters/LeftEyeX":
+                                case "/avatar/parameters/LeftEye":
                                     float.TryParse(message[0].ToString(), out candidate);
                                     LeftEyeX = candidate;
                                     break;
-                                case "/avatar/parameters/RightEyeX":
+                                case "/avatar/parameters/RightEye":
                                     float.TryParse(message[0].ToString(), out candidate);
                                     RightEyeX = candidate;
                                     break;
@@ -88,13 +88,14 @@ namespace EyeTrackVR
                                 default:
                                     break;
                             }
+                            PrintDebugString();
                         }
                     }
                 }
                 catch (Exception e)
                 {
-                    if (_receiver.State == OscSocketState.Connected)
-                        UniLog.Error(e.Message);
+                    if (_receiver.State == OscSocketState.Connected) 
+                        Console.Error.WriteLine(e.Message);
                 }
             }
         }
@@ -103,6 +104,11 @@ namespace EyeTrackVR
         {
             _receiver.Close();
             _thread.Join();
+        }
+
+        private static void PrintDebugString()
+        {
+            Console.WriteLine("LeftEyeX: {0}, RightEyeX: {1}, EyesY: {2}, LeftEyeLidExpandedSqueeze: {3}, RightEyeLidExpandedSqueeze: {4}, EyeDilation: {5}", LeftEyeX, RightEyeX, EyesY, LeftEyeLidExpandedSqueeze, RightEyeLidExpandedSqueeze, EyeDilation);
         }
     }
 }

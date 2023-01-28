@@ -69,20 +69,20 @@ namespace EyeTrackVR
 
 			public void UpdateInputs(float deltaTime)
 			{
-				_eyes.IsEyeTrackingActive = Engine.Current.InputInterface.VR_Active;
+				_eyes.IsEyeTrackingActive = Engine.Current.InputInterface.VR_Active || Engine.Current.InputInterface.ScreenActive;
 
 				var fakeWiden = MathX.Remap(MathX.Clamp01(ETVR_OSC.EyesY), 0f, 1f, 0f, 0.33f);
 
 				var leftEyeDirection = Project2DTo3D(ETVR_OSC.LeftEyeX, ETVR_OSC.EyesY);
-				UpdateEye(leftEyeDirection, float3.Zero, true, ETVR_OSC.EyeDilation, ETVR_OSC.LeftEyeLid, 
+				UpdateEye(leftEyeDirection, float3.Zero, true, ETVR_OSC.EyeDilation, ETVR_OSC.LeftEyeLidExpandedSqueeze, 
 					fakeWiden, 0f, 0f, deltaTime, _eyes.LeftEye);
 
 				var rightEyeDirection = Project2DTo3D(ETVR_OSC.LeftEyeX, ETVR_OSC.EyesY);
-				UpdateEye(rightEyeDirection, float3.Zero, true, ETVR_OSC.EyeDilation, ETVR_OSC.RightEyeLid, 
+				UpdateEye(rightEyeDirection, float3.Zero, true, ETVR_OSC.EyeDilation, ETVR_OSC.RightEyeLidExpandedSqueeze, 
 					fakeWiden, 0f, 0f, deltaTime, _eyes.RightEye);
 
 				var combinedDirection = MathX.Average(leftEyeDirection, rightEyeDirection);
-				var combinedOpeness = MathX.Average(ETVR_OSC.LeftEyeLid, ETVR_OSC.RightEyeLid);
+				var combinedOpeness = MathX.Average(ETVR_OSC.LeftEyeLidExpandedSqueeze, ETVR_OSC.RightEyeLidExpandedSqueeze);
 				UpdateEye(combinedDirection, float3.Zero, true, ETVR_OSC.EyeDilation, combinedOpeness, 
 					fakeWiden, 0f, 0f, deltaTime, _eyes.CombinedEye);
 				_eyes.ComputeCombinedEyeParameters();

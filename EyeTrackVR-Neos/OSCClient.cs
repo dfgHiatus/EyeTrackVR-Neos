@@ -1,6 +1,7 @@
 ﻿using BaseX;
 using Rug.Osc;
 using System;
+using System.Net;
 using System.Threading;
 
 namespace EyeTrackVR
@@ -12,8 +13,8 @@ namespace EyeTrackVR
         public static float LeftEyeX { get; set; }
         public static float RightEyeX { get; set; }
         public static float EyesY { get; set; }
-        public static float LeftEyeLid { get; set; }
-        public static float RightEyeLid { get; set; }
+        public static float LeftEyeLidExpandedSqueeze { get; set; }
+        public static float RightEyeLidExpandedSqueeze { get; set; }
         public static float EyeDilation { get; set; }
 
         private static OscReceiver _receiver;
@@ -26,8 +27,10 @@ namespace EyeTrackVR
             {
                 return;
             }
+            IPAddress candidate;
+            IPAddress.TryParse("127.0.0.1", out candidate);
 
-            _receiver = new OscReceiver(DEFAULT_PORT);
+            _receiver = new OscReceiver(candidate, DEFAULT_PORT);
             _thread = new Thread(new ThreadStart(ListenLoop));
             _receiver.Connect();
             _thread.Start();
@@ -58,11 +61,11 @@ namespace EyeTrackVR
                         packet = _receiver.Receive();
                         if (OscMessage.TryParse(packet.ToString(), out message)) {
                             switch (message.Address) {
-                                case "/avatar/parameters/LeftEye":
+                                case "/avatar/parameters/LeftEyeX":
                                     float.TryParse(message[0].ToString(), out candidate);
                                     LeftEyeX = candidate;
                                     break;
-                                case "/avatar/parameters/RightEye":
+                                case "/avatar/parameters/RightEyeX":
                                     float.TryParse(message[0].ToString(), out candidate);
                                     RightEyeX = candidate;
                                     break;
@@ -70,13 +73,14 @@ namespace EyeTrackVR
                                     float.TryParse(message[0].ToString(), out candidate);
                                     EyesY = candidate;
                                     break;
-                                case "/avatar/parameters/LeftEyeLid":
+                                case "/avatar/parameters/LeftEyeLidExpandedSqueeze":
                                     float.TryParse(message[0].ToString(), out candidate);
-                                    LeftEyeLid = candidate;
+                                    LeftEyeLidExpandedSqueeze = candidate;
+                                    UniLog.Warning($"received message : {LeftEyeLidExpandedSqueeze}");
                                     break;
-                                case "/avatar/parameters/RightEyeLid":
+                                case "/avatar/parameters/RightEyeLidExpandedSqueeze":
                                     float.TryParse(message[0].ToString(), out candidate);
-                                    RightEyeLid = candidate;
+                                    RightEyeLidExpandedSqueeze = candidate;
                                     break;
                                 case "/avatar/parameters/EyesDilation":
                                     float.TryParse(message[0].ToString(), out candidate);
@@ -87,7 +91,6 @@ namespace EyeTrackVR
                             }
                         }
                     }
-                    Thread.Sleep(10);
                 }
                 catch (Exception e)
                 {

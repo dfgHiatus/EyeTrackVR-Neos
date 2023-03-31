@@ -7,5 +7,4 @@
       <HintPath>$(NeosPath)Rug.Osc.dll</HintPath>
     </Reference>
   </ItemGroup>
-  <OutputType>exe</OutputType>
 </Project>

@@ -77,7 +77,7 @@ namespace EyeTrackVR
 				UpdateEye(leftEyeDirection, float3.Zero, true, ETVR_OSC.EyeDilation, ETVR_OSC.LeftEyeLidExpandedSqueeze, 
 					fakeWiden, 0f, 0f, deltaTime, _eyes.LeftEye);
 
-				var rightEyeDirection = Project2DTo3D(ETVR_OSC.LeftEyeX, ETVR_OSC.EyesY);
+				var rightEyeDirection = Project2DTo3D(ETVR_OSC.RightEyeX, ETVR_OSC.EyesY);
 				UpdateEye(rightEyeDirection, float3.Zero, true, ETVR_OSC.EyeDilation, ETVR_OSC.RightEyeLidExpandedSqueeze, 
 					fakeWiden, 0f, 0f, deltaTime, _eyes.RightEye);
 

@@ -6,10 +6,10 @@ using System.Threading;
 namespace EyeTrackVR
 {
     // Credit to yewnyx on the VRC OSC Discord for this
-    
+
     public class OSCClient
     {
-        public static float LeftEyeX {get; set;}
+        public static float LeftEyeX { get; set; }
         public static float RightEyeX { get; set; }
         public static float EyesY { get; set; }
         public static float LeftEyeLidExpandedSqueeze { get; set; }
@@ -55,12 +55,17 @@ namespace EyeTrackVR
             OscMessage message;
             float candidate = 0;
 
-            while (_receiver.State != OscSocketState.Closed) {
-                try {
-                    if (_receiver.State == OscSocketState.Connected) {
+            while (_receiver.State != OscSocketState.Closed)
+            {
+                try
+                {
+                    if (_receiver.State == OscSocketState.Connected)
+                    {
                         packet = _receiver.Receive();
-                        if (OscMessage.TryParse(packet.ToString(), out message)) {
-                            switch (message.Address) {
+                        if (OscMessage.TryParse(packet.ToString(), out message))
+                        {
+                            switch (message.Address)
+                            {
                                 case "/avatar/parameters/LeftEye":
                                     float.TryParse(message[0].ToString(), out candidate);
                                     LeftEyeX = candidate;
@@ -88,13 +93,12 @@ namespace EyeTrackVR
                                 default:
                                     break;
                             }
-                            PrintDebugString();
                         }
                     }
                 }
                 catch (Exception e)
                 {
-                    if (_receiver.State == OscSocketState.Connected) 
+                    if (_receiver.State == OscSocketState.Connected)
                         Console.Error.WriteLine(e.Message);
                 }
             }

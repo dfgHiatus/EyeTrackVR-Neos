@@ -28,6 +28,8 @@ namespace EyeTrackVR
 
         [AutoRegisterConfigKey]
         public static ModConfigurationKey<float> Beta = new ModConfigurationKey<float>("beta", "Eye Swing Multiplier Y", () => 1.0f);
+        [AutoRegisterConfigKey]
+        private static ModConfigurationKey<int> OscPort = new ModConfigurationKey<int>("osc_port", "Babble OSC port", () => 9000);
 
         [HarmonyPatch(typeof(InputInterface), MethodType.Constructor)]
         [HarmonyPatch(new[] { typeof(Engine) })]
@@ -37,7 +39,7 @@ namespace EyeTrackVR
             {
                 try
                 {
-                    ETVR = new ETVR_OSC();
+                    ETVR = new ETVR_OSC(Config.GetValue(OscPort));
                     EyeTrackVRInterface gen = new EyeTrackVRInterface();
                     __instance.RegisterInputDriver(gen);
                 }

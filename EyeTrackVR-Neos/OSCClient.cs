@@ -19,7 +19,7 @@ namespace EyeTrackVR
 
         private static OscReceiver _receiver;
         private static Thread _thread;
-        
+
         private const int DEFAULT_PORT = 9000;
 
         public ETVR_OSC(int port)
@@ -28,8 +28,12 @@ namespace EyeTrackVR
             {
                 return;
             }
+            
+            IPAddress candidate;
+            IPAddress.TryParse("127.0.0.1", out candidate);
 
-            _receiver = new OscReceiver(port);
+            _receiver = new OscReceiver(candidate, port);
+
             _thread = new Thread(new ThreadStart(ListenLoop));
             _receiver.Connect();
             _thread.Start();

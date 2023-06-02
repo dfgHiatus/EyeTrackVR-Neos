@@ -1,103 +1,74 @@
 ﻿using BaseX;
-using Rug.Osc;
+using OscCore;
 using System;
+using System.Collections.Generic;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace EyeTrackVR
 {
     // Credit to yewnyx on the VRC OSC Discord for this
 
-    public class ETVR_OSC
+    public class ETVROSC
     {
-        public static float LeftEyeX { get; set; }
-        public static float RightEyeX { get; set; }
-        public static float EyesY { get; set; }
-        public static float LeftEyeLidExpandedSqueeze { get; set; }
-        public static float RightEyeLidExpandedSqueeze { get; set; }
-        public static float EyeDilation { get; set; }
+        public static bool OscSocketState;
+        public static Dictionary<string, float> EyeDataWithAddress = new Dictionary<string, float>();
 
-        private static OscReceiver _receiver;
-        private static Thread _thread;
+        private static UdpClient? _receiver;
+        private static Task? _task;
 
         private const int DEFAULT_PORT = 9000;
 
-        public ETVR_OSC(int port)
+        public ETVROSC(int? port = null)
         {
             if (_receiver != null)
             {
                 return;
             }
-            
+
             IPAddress candidate;
             IPAddress.TryParse("127.0.0.1", out candidate);
 
-            _receiver = new OscReceiver(candidate, port);
+            if (port.HasValue)
+                _receiver = new UdpClient(new IPEndPoint(candidate, port.Value));
+            else
+                _receiver = new UdpClient(new IPEndPoint(candidate, DEFAULT_PORT));
 
-            _thread = new Thread(new ThreadStart(ListenLoop));
-            _receiver.Connect();
-            _thread.Start();
+            foreach (var shape in ETVRExpressions.EyeDataWithAddress)
+                EyeDataWithAddress.Add(shape, 0f);
+
+            OscSocketState = true;
+            _task = Task.Run(() => ListenLoop());
         }
 
-        private static void ListenLoop()
+        private static async void ListenLoop()
         {
-            OscPacket packet;
-            OscMessage message;
-            float candidate = 0;
-
-            while (_receiver.State != OscSocketState.Closed)
+            UniLog.Log("Started EyeTrackVR loop");
+            while (OscSocketState)
             {
-                try
+                var result = await _receiver.ReceiveAsync();
+                OscMessage message = OscMessage.Read(result.Buffer, 0, result.Buffer.Length);
+                if (!EyeDataWithAddress.ContainsKey(message.Address))
                 {
-                    if (_receiver.State == OscSocketState.Connected)
-                    {
-                        packet = _receiver.Receive();
-                        if (OscMessage.TryParse(packet.ToString(), out message))
-                        {
-                            switch (message.Address)
-                            {
-                                case "/avatar/parameters/LeftEyeX":
-                                    float.TryParse(message[0].ToString(), out candidate);
-                                    LeftEyeX = candidate;
-                                    break;
-                                case "/avatar/parameters/RightEyeX":
-                                    float.TryParse(message[0].ToString(), out candidate);
-                                    RightEyeX = candidate;
-                                    break;
-                                case "/avatar/parameters/EyesY":
-                                    float.TryParse(message[0].ToString(), out candidate);
-                                    EyesY = candidate;
-                                    break;
-                                case "/avatar/parameters/LeftEyeLidExpandedSqueeze":
-                                    float.TryParse(message[0].ToString(), out candidate);
-                                    LeftEyeLidExpandedSqueeze = candidate;
-                                    break;
-                                case "/avatar/parameters/RightEyeLidExpandedSqueeze":
-                                    float.TryParse(message[0].ToString(), out candidate);
-                                    RightEyeLidExpandedSqueeze = candidate;
-                                    break;
-                                case "/avatar/parameters/EyesDilation":
-                                    float.TryParse(message[0].ToString(), out candidate);
-                                    EyeDilation = candidate;
-                                    break;
-                                default:
-                                    break;
-                            }
-                        }
-                    }
+                    continue;
                 }
-                catch (Exception e)
+                if (float.TryParse(message[0].ToString(), out float candidate))
                 {
-                    if (_receiver.State == OscSocketState.Connected)
-                        UniLog.Error(e.Message);
+                    EyeDataWithAddress[message.Address] = candidate;
                 }
+
             }
         }
 
         public void Teardown()
         {
+            UniLog.Log("EyeTrackVR teardown called");
+            OscSocketState = false;
             _receiver.Close();
-            _thread.Join();
+            _task.Wait();
+            UniLog.Log("EyeTrackVR teardown completed");
         }
     }
 }

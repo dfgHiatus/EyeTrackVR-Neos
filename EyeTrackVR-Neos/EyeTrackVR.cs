@@ -9,19 +9,19 @@ namespace EyeTrackVR
     public class EyeTrackVR : NeosMod
     {
         public override string Name => "EyeTrackVR-Neos";
-        public override string Author => "dfgHiatus";
-        public override string Version => "1.0.0";
+        public override string Author => "dfgHiatus + PLYSHKA";
+        public override string Version => "1.0.1";
         public override string Link => "https://github.com/dfgHiatus/EyeTrackVR-Neos";
         public override void OnEngineInit()
         {
             Config = GetConfiguration();
-            new Harmony("net.dfgHiatus.EyeTrackVR-Neos").PatchAll();
+            new Harmony("net.dfgHiatus.plyshka.EyeTrackVR-Neos").PatchAll();
             Engine.Current.OnShutdown += () => ETVR.Teardown();
         }
-        private static ETVR_OSC ETVR;
+        private static ETVROSC ETVR;
         private static ModConfiguration Config;
         [AutoRegisterConfigKey]
-        public static ModConfigurationKey<bool> ModEnabled = new ModConfigurationKey<bool>("enabled", "Mod Enabled", () => false);
+        public static ModConfigurationKey<bool> ModEnabled = new ModConfigurationKey<bool>("enabled", "Mod Enabled", () => true);
 
         [AutoRegisterConfigKey]
         public static ModConfigurationKey<float> Alpha = new ModConfigurationKey<float>("alpha", "Eye Swing Multiplier X", () => 1.0f);
@@ -29,7 +29,7 @@ namespace EyeTrackVR
         [AutoRegisterConfigKey]
         public static ModConfigurationKey<float> Beta = new ModConfigurationKey<float>("beta", "Eye Swing Multiplier Y", () => 1.0f);
         [AutoRegisterConfigKey]
-        private static ModConfigurationKey<int> OscPort = new ModConfigurationKey<int>("osc_port", "Babble OSC port", () => 9000);
+        private static ModConfigurationKey<int> OscPort = new ModConfigurationKey<int>("osc_port", "EyeTrackVR OSC port", () => 9000);
 
         [HarmonyPatch(typeof(InputInterface), MethodType.Constructor)]
         [HarmonyPatch(new[] { typeof(Engine) })]
@@ -39,7 +39,7 @@ namespace EyeTrackVR
             {
                 try
                 {
-                    ETVR = new ETVR_OSC(Config.GetValue(OscPort));
+                    ETVR = new ETVROSC(Config.GetValue(OscPort));
                     EyeTrackVRInterface gen = new EyeTrackVRInterface();
                     __instance.RegisterInputDriver(gen);
                 }
@@ -83,19 +83,19 @@ namespace EyeTrackVR
                     _eyes.IsEyeTrackingActive = Engine.Current.InputInterface.VR_Active || Engine.Current.InputInterface.ScreenActive;
                 }
 
-                var fakeWiden = MathX.Remap(MathX.Clamp01(ETVR_OSC.EyesY), 0f, 1f, 0f, 0.33f);
+                var fakeWiden = MathX.Remap(MathX.Clamp01(ETVROSC.EyeDataWithAddress["/avatar/parameters/EyesY"]), 0f, 1f, 0f, 0.33f);
 
-                var leftEyeDirection = Project2DTo3D(ETVR_OSC.LeftEyeX, ETVR_OSC.EyesY);
-                UpdateEye(leftEyeDirection, float3.Zero, true, ETVR_OSC.EyeDilation, ETVR_OSC.LeftEyeLidExpandedSqueeze,
+                var leftEyeDirection = Project2DTo3D(ETVROSC.EyeDataWithAddress["/avatar/parameters/LeftEyeX"], ETVROSC.EyeDataWithAddress["/avatar/parameters/EyesY"]);
+                UpdateEye(leftEyeDirection, float3.Zero, true, ETVROSC.EyeDataWithAddress["/avatar/parameters/EyesDilation"], ETVROSC.EyeDataWithAddress["/avatar/parameters/LeftEyeLidExpandedSqueeze"],
                     fakeWiden, 0f, 0f, deltaTime, _eyes.LeftEye);
 
-                var rightEyeDirection = Project2DTo3D(ETVR_OSC.RightEyeX, ETVR_OSC.EyesY);
-                UpdateEye(rightEyeDirection, float3.Zero, true, ETVR_OSC.EyeDilation, ETVR_OSC.RightEyeLidExpandedSqueeze,
+                var rightEyeDirection = Project2DTo3D(ETVROSC.EyeDataWithAddress["/avatar/parameters/RightEyeX"], ETVROSC.EyeDataWithAddress["/avatar/parameters/EyesY"]);
+                UpdateEye(rightEyeDirection, float3.Zero, true, ETVROSC.EyeDataWithAddress["/avatar/parameters/EyesDilation"], ETVROSC.EyeDataWithAddress["/avatar/parameters/RightEyeLidExpandedSqueeze"],
                     fakeWiden, 0f, 0f, deltaTime, _eyes.RightEye);
 
                 var combinedDirection = MathX.Average(leftEyeDirection, rightEyeDirection);
-                var combinedOpeness = MathX.Average(ETVR_OSC.LeftEyeLidExpandedSqueeze, ETVR_OSC.RightEyeLidExpandedSqueeze);
-                UpdateEye(combinedDirection, float3.Zero, true, ETVR_OSC.EyeDilation, combinedOpeness,
+                var combinedOpeness = MathX.Average(ETVROSC.EyeDataWithAddress["/avatar/parameters/LeftEyeLidExpandedSqueeze"], ETVROSC.EyeDataWithAddress["/avatar/parameters/RightEyeLidExpandedSqueeze"]);
+                UpdateEye(combinedDirection, float3.Zero, true, ETVROSC.EyeDataWithAddress["/avatar/parameters/EyesDilation"], combinedOpeness,
                     fakeWiden, 0f, 0f, deltaTime, _eyes.CombinedEye);
                 _eyes.ComputeCombinedEyeParameters();
 

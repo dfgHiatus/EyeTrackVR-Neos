@@ -27,7 +27,7 @@ jobs:
         with:
           name: EyeTrackVR-Neos
           path: |
-            ./EyeTrackVR-Neos/bin/Release/net462/Rug.Osc.dll
+            ./EyeTrackVR-Neos/bin/Release/net462/OscCore.dll
             ./EyeTrackVR-Neos/bin/Release/net462/EyeTrackVR-Neos.dll
           if-no-files-found: error
           retention-days: 5
@@ -38,6 +38,6 @@ jobs:
           draft: true # if creating a new release, make it a draft
           files: |
             ./EyeTrackVR-Neos/bin/Release/net462/EyeTrackVR-Neos.dll
-            ./EyeTrackVR-Neos/bin/Release/net462/Rug.Osc.dll
+            ./EyeTrackVR-Neos/bin/Release/net462/OscCore.dll
           fail_on_unmatched_files: true
 
